@@ -2,11 +2,26 @@ version: '3.8'
 
 services:
   mongodb:
-    image: 'mongo'
+    container_name: mongodb
+    image: mongo:latest
+    hostname: mongodb
     volumes:
+      - config:/data/configdb
       - data:/data/db
     env_file:
       - ./env/mongo.env
+    ports:
+      - 27017:27017
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongo -u root -p some-password --quiet) -eq 1
+      interval: 10s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    entrypoint: ["/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0"]
       
   backend:
     build: ./backend
